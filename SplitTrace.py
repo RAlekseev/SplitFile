@@ -4,9 +4,8 @@ from time import time
 
 
 def make_breaking_up(line : str, temp_f):
-	reg = r'^\d{2}\.\d{2}\.\d{4}\ \d{2}\:\d{2}\:\d{2}'
-	result = re.match(reg, line)
-	if result is not  None:
+
+	if type_check(line):
 		br_up_item = line.split()[2][1:-1] if first == '--module' else line.split()[0] 
 		if br_up_item in opened_f.keys():
 			temp_f = opened_f[br_up_item]
@@ -23,6 +22,18 @@ def make_breaking_up(line : str, temp_f):
 def clear_opened_f(opened_f):
 	for item in opened_f.keys():
 		opened_f[item].close()
+
+def type_check(line : str) -> bool:
+	return line[0].isdigit() \
+	and line[1].isdigit() \
+	and line[2] == '.' \
+	and line[3].isdigit() \
+	and line[4].isdigit() \
+	and line[5] == '.' \
+	and line[6].isdigit() \
+	and line[7].isdigit() \
+	and line[8].isdigit() \
+	and line[9].isdigit()
 		
 
 time0 = time()

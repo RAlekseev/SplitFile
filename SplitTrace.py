@@ -23,8 +23,8 @@ def clear_opened_f(opened_f):
 	for item in opened_f.keys():
 		opened_f[item].close()
 
-def type_check(line : str):
-	if line[0].isdigit() \
+def type_check(line : str) -> bool:
+	return line[0].isdigit() \
 	and line[1].isdigit() \
 	and line[2] == '.' \
 	and line[3].isdigit() \
@@ -33,10 +33,7 @@ def type_check(line : str):
 	and line[6].isdigit() \
 	and line[7].isdigit() \
 	and line[8].isdigit() \
-	and line[9].isdigit():
-		return True
-	else:
-		return False
+	and line[9].isdigit()
 		
 
 time0 = time()

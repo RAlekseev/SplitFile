@@ -1,58 +1,54 @@
-import sys
-import re
 from time import time
+from sys import argv
 
 
-def make_breaking_up(line : str, temp_f):
+def make_breaking_up(line,mode : str, current_recording_file):
 
-	if type_check(line):
-		br_up_item = line.split()[2][1:-1] if first == '--module' else line.split()[0] 
-		if br_up_item in opened_f.keys():
-			temp_f = opened_f[br_up_item]
-			temp_f.write(line)
+	if is_date_first(line):
+		breaking_up_element = line.split()[2][1:-1] if mode == '--module' else line[0:10] 
+		if breaking_up_element in files.keys():
+			current_recording_file = files[breaking_up_element]
+			current_recording_file.write(line)
 		else:
-			temp_f = open( 'trace_' + br_up_item + '.log', 'w')
-			opened_f[br_up_item] = temp_f
-			temp_f.write(line)
+			current_recording_file = open( 'trace_' + breaking_up_element + '.log', 'w')
+			files[breaking_up_element] = current_recording_file
+			current_recording_file.write(line)
 	else:
-		temp_f.write(line)
-	return temp_f
+		current_recording_file.write(line)
+	return current_recording_file
 
 
-def clear_opened_f(opened_f):
-	for item in opened_f.keys():
-		opened_f[item].close()
-
-def type_check(line : str) -> bool:
+def is_date_first(line : str) -> bool:
 	return line[0].isdigit() \
-	and line[1].isdigit() \
-	and line[2] == '.' \
-	and line[3].isdigit() \
-	and line[4].isdigit() \
-	and line[5] == '.' \
-	and line[6].isdigit() \
-	and line[7].isdigit() \
-	and line[8].isdigit() \
+	and line[1].isdigit()    \
+	and line[2] == '.'       \
+	and line[3].isdigit()    \
+	and line[4].isdigit()    \
+	and line[5] == '.'       \
+	and line[6].isdigit()    \
+	and line[7].isdigit()    \
+	and line[8].isdigit()    \
 	and line[9].isdigit()
 		
 
-time0 = time()
+start_time = time()
 
 if __name__ == "__main__":
-	first = sys.argv[1] if len(sys.argv) > 1 else exit('bad args')
-	second = sys.argv[2] if len(sys.argv) > 2 else 'trace.log'
+	mode = argv[1] if len(argv) > 1 else exit('bad args')
+	input_file = argv[2] if len(argv) > 2 else 'trace.log'
 	try:
-		f = open(second, encoding = 'utf-8')
+		f = open(input_file, encoding = 'utf-8')
 	except:
-		pass
+		exit('Не удалось открыть файл: ' + input_file)
 	
-	temp_f = open('_Unknown_.log', 'w')
-	opened_f = {'Unknown': temp_f}
+	current_recording_file = open('_Unknown_.log', 'w')
+	files = {'Unknown': current_recording_file}
 
 	for line in f:
-		temp_f =  make_breaking_up(line, temp_f)
+		current_recording_file =  make_breaking_up(line, mode, current_recording_file)
 
-	clear_opened_f(opened_f)
+	for file in files.values():
+		file.close()
 	f.close()
 	
-print(time() - time0)
+print(time() - start_time)

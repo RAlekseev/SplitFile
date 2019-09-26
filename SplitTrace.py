@@ -1,21 +1,40 @@
 from time import time
-from sys import argv
+from sys import argv, getsizeof
+import os
+
+class Spliter:
+	files = {}
+
+	def __init__(self, input_file):
+		self.input_file_name = input_file
+		self.current_recording_file = open('_Unknown_.log', 'w')
+		self.files['_Unknown_.log'] = self.current_recording_file
+		try:
+
+			self.input_file = open(self.input_file_name, encoding = 'utf-8')
+			self.files[self.input_file_name] = self.input_file
+		except:
+			exit('Не удалось открыть файл: ' + self.input_file_name)
+
+	def split_files(self, mode: str):
+		for line in self.input_file:
+			if is_date_first(line):
+				split_element = line.split()[2][1:-1] if mode == '--module' else line[0:10]
+				log_file_name = 'trace_' + split_element + '.log'
+				if log_file_name in self.files:
+					self.current_recording_file = self.files[log_file_name]
+					self.current_recording_file.write(line)
+				else:
+					self.current_recording_file = open( log_file_name, 'w')
+					self.files[log_file_name] = self.current_recording_file
+					self.current_recording_file.write(line)
+			else:
+				self.current_recording_file.write(line)
 
 
-def make_breaking_up(line,mode : str, current_recording_file):
-
-	if is_date_first(line):
-		breaking_up_element = line.split()[2][1:-1] if mode == '--module' else line[0:10] 
-		if breaking_up_element in files.keys():
-			current_recording_file = files[breaking_up_element]
-			current_recording_file.write(line)
-		else:
-			current_recording_file = open( 'trace_' + breaking_up_element + '.log', 'w')
-			files[breaking_up_element] = current_recording_file
-			current_recording_file.write(line)
-	else:
-		current_recording_file.write(line)
-	return current_recording_file
+	def __del__(self):
+		for temp_file in self.files.values():
+			temp_file.close
 
 
 def is_date_first(line : str) -> bool:
@@ -29,26 +48,13 @@ def is_date_first(line : str) -> bool:
 	and line[7].isdigit()    \
 	and line[8].isdigit()    \
 	and line[9].isdigit()
-		
+
 
 start_time = time()
 
 if __name__ == "__main__":
 	mode = argv[1] if len(argv) > 1 else exit('bad args')
 	input_file = argv[2] if len(argv) > 2 else 'trace.log'
-	try:
-		f = open(input_file, encoding = 'utf-8')
-	except:
-		exit('Не удалось открыть файл: ' + input_file)
-	
-	current_recording_file = open('_Unknown_.log', 'w')
-	files = {'Unknown': current_recording_file}
+	Spliter(input_file).split_files(mode)
 
-	for line in f:
-		current_recording_file =  make_breaking_up(line, mode, current_recording_file)
-
-	for file in files.values():
-		file.close()
-	f.close()
-	
-print(time() - start_time)
+print('\nОбщее время работы программы: ' + str(time() - start_time) + ' сек.')

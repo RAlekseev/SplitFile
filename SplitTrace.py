@@ -7,29 +7,42 @@ class Spliter:
 
 	def __init__(self, input_file):
 		self.input_file_name = input_file
-		self.current_recording_file = open('_Unknown_.log', 'w')
-		self.files['_Unknown_.log'] = self.current_recording_file
-		try:
+		self.input_file = open(self.input_file_name, encoding = 'utf-8')
+		self.current_file = open('_Unknown_.log', 'w')
+		self.files['_Unknown_.log'] = self.current_file
+		self.files[self.input_file_name] = self.input_file
 
-			self.input_file = open(self.input_file_name, encoding = 'utf-8')
-			self.files[self.input_file_name] = self.input_file
-		except:
-			exit('Не удалось открыть файл: ' + self.input_file_name)
+		self.INPUT_FILE_SIZE_DIV_10 = os.path.getsize(self.input_file_name) // 10
+		self.readed_data_size = 0
+		self.progressbar_counter = 0
 
 	def split_files(self, mode: str):
+		
+		print('[          ]  0%', end  = '')
 		for line in self.input_file:
+			self.readed_data_size += len(line.encode('utf-8'))
+			if self.readed_data_size > (self.INPUT_FILE_SIZE_DIV_10 * \
+										self.progressbar_counter):
+				self.progressbar_counter += 1
+				update_progressbar(self.progressbar_counter)
+				
+
 			if is_date_first(line):
-				split_element = line.split()[2][1:-1] if mode == '--module' else line[0:10]
+				if mode == '--module':
+					split_element = line[25:line.find(']', 25)]
+				else:
+					split_element = line[0:10]
+				
 				log_file_name = 'trace_' + split_element + '.log'
 				if log_file_name in self.files:
-					self.current_recording_file = self.files[log_file_name]
-					self.current_recording_file.write(line)
+					self.current_file = self.files[log_file_name]
+					self.current_file.write(line)
 				else:
-					self.current_recording_file = open( log_file_name, 'w')
-					self.files[log_file_name] = self.current_recording_file
-					self.current_recording_file.write(line)
+					self.current_file = open( log_file_name, 'w')
+					self.files[log_file_name] = self.current_file
+					self.current_file.write(line)
 			else:
-				self.current_recording_file.write(line)
+				self.current_file.write(line)
 
 
 	def __del__(self):
@@ -49,12 +62,37 @@ def is_date_first(line : str) -> bool:
 	and line[8].isdigit()    \
 	and line[9].isdigit()
 
+def parse_args() -> tuple:
+	mode = argv[1] if len(argv) > 1 else exit('bad args')
+	input_file = argv[2] if len(argv) > 2 else 'trace.log'
+	return input_file, mode
+
+def update_progressbar(progressbar_counter: int):
+    print('\r', end='')
+    print('[', end='')
+    for i in range (10):
+        if i < progressbar_counter:
+            print('#', end='')
+        else:
+            print(' ', end='')
+    print('] {}%'.format(int(progressbar_counter*10)), end='')
+
+def process():
+	input_file_name, mode = parse_args()
+	splitter = Spliter(input_file_name)
+	splitter.split_files(mode)
+
 
 start_time = time()
 
 if __name__ == "__main__":
-	mode = argv[1] if len(argv) > 1 else exit('bad args')
-	input_file = argv[2] if len(argv) > 2 else 'trace.log'
-	Spliter(input_file).split_files(mode)
+	try:
+		process()
+	except FileNotFoundError:
+		print('Не удалось открыть файл: ' + self.input_file_name +\
+				 ' файл не существует') 
+	except PermissionError:
+		print('Не удалось открыть файл: ' + self.input_file_name +\
+				 ' недостаточно прав')
 
 print('\nОбщее время работы программы: ' + str(time() - start_time) + ' сек.')

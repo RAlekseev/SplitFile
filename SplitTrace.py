@@ -3,32 +3,27 @@ from sys import argv
 import os
 
 
-
 class Spliter:
     files = {}
 
     def __init__(self, input_file):
         self.input_file_name = input_file
-        self.input_file = open(self.input_file_name, encoding='utf-8')
-        try:
-            self.files['_Unknown_.log'] = open('_Unknown_.log', 'w')
-        except:
-            raise Exception("Нет прав на создание _Unknown_.log")
+        self.input_file = self.open_file(self.input_file_name)
         self.files[self.input_file_name] = self.input_file
 
-        self.INPUT_FILE_SIZE_DIV_10 = os.path.getsize(self.input_file_name) // 10
         self.readed_data_size = 0
         self.progressbar_counter = 0
 
     def split_files(self, mode: str):
-
+        PROGRESSBAR_STEP = os.path.getsize(self.input_file_name) // 10
         print('[          ]  0%', end='')
+
         for line in self.input_file:
             if self.readed_data_size == 0:
                 line = line[1:]
 
             self.readed_data_size += len(line.encode('utf-8'))
-            if self.readed_data_size > (self.INPUT_FILE_SIZE_DIV_10 *
+            if self.readed_data_size > (PROGRESSBAR_STEP *
                                         self.progressbar_counter):
                 self.progressbar_counter += 1
                 update_progressbar(self.progressbar_counter)
@@ -54,8 +49,19 @@ class Spliter:
                 self.current_file.write(line)
 
     def write_to_basket(self, line: str):
+        if '_Unknown_.log'  in self.files.keys():
+            self.files['_Unknown_.log'] = self.open_file('_Unknown_.log', 'w')
         self.current_file = self.files['_Unknown_.log']
         self.current_file.write(line)
+
+    def open_file(self, file_name, mode='r'):
+        try:
+            file = open(file_name, mode)
+            return file
+        except FileNotFoundError:
+            raise Exception("Не удалось открыть файл: " + file_name + " файл не существует")
+        except PermissionError:
+            raise Exception("Не удалось открыть файл: " + file_name + " недостаточно прав")
 
     def __del__(self):
         for temp_file in self.files.values():
@@ -106,10 +112,6 @@ start_time = time()
 if __name__ == "__main__":
     try:
         process()
-    except FileNotFoundError:
-        print('Не удалось открыть исходный файл:  файл не существует')
-    except PermissionError:
-        print('Не удалось открыть исходный файл:  недостаточно прав')
     except Exception as e:
         print(e)
 

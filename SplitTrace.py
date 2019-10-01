@@ -11,6 +11,7 @@ class Spliter:
         self.input_file = self.open_file(self.input_file_name)
         self.files[self.input_file_name] = self.input_file
 
+
         self.readed_data_size = 0
         self.progressbar_counter = 0
 
@@ -19,14 +20,8 @@ class Spliter:
         print('[          ]  0%', end='')
 
         for line in self.input_file:
-            if self.readed_data_size == 0:
-                line = line[1:]
-
-            self.readed_data_size += len(line.encode('utf-8'))
-            if self.readed_data_size > (PROGRESSBAR_STEP *
-                                        self.progressbar_counter):
-                self.progressbar_counter += 1
-                update_progressbar(self.progressbar_counter)
+            if self.readed_data_size == 0:  # В первой строке line[0] символ порядка байтов.
+                line = line[1:]             # <- убираем первый символ из строки для корректной работы
 
             if is_date_first(line):
                 if mode == '--module':
@@ -34,24 +29,38 @@ class Spliter:
                 else:
                     split_element = line[0:10]
 
-                log_file_name = 'trace_' + split_element + '.log'
-                if log_file_name in self.files:
-                    self.current_file = self.files[log_file_name]
-                    self.current_file.write(line)
-                else:
-                    try:
+                log_file_name = f'trace_{split_element}.log'
+                try:
+                    if log_file_name in self.files:
+                        self.current_file = self.files[log_file_name]
+                        self.current_file.write(line)
+                    else:
                         self.current_file = open(log_file_name, 'w')
                         self.files[log_file_name] = self.current_file
                         self.current_file.write(line)
-                    except:
-                        self.write_to_basket(line)
+                except FileNotFoundError:
+                    self.write_to_basket(line)
+                except PermissionError:
+                    self.write_to_basket(line)
+                except KeyError:
+                    self.write_to_basket(line)
             else:
+                if self.readed_data_size == 0:   # В случае если первая строка не содержит дату или модуль
+                    self.write_to_basket(line)   # <- Записываем строки в _Unknown_.log пока не найдем их
                 self.current_file.write(line)
 
+            self.readed_data_size += len(line.encode('utf-8'))
+            if self.readed_data_size > (PROGRESSBAR_STEP *
+                                        self.progressbar_counter):
+                self.progressbar_counter += 1
+                update_progressbar(self.progressbar_counter)
+
     def write_to_basket(self, line: str):
-        if '_Unknown_.log'  in self.files.keys():
-            self.files['_Unknown_.log'] = self.open_file('_Unknown_.log', 'w')
-        self.current_file = self.files['_Unknown_.log']
+        if '_Unknown_.log' in self.files.keys():
+            self.current_file = self.files['_Unknown_.log']
+        else:
+            self.current_file = self.open_file('_Unknown_.log', 'w')
+            self.files['_Unknown_.log'] = self.current_file
         self.current_file.write(line)
 
     def open_file(self, file_name, mode='r'):
@@ -59,9 +68,9 @@ class Spliter:
             file = open(file_name, mode)
             return file
         except FileNotFoundError:
-            raise Exception("Не удалось открыть файл: " + file_name + " файл не существует")
+            print(f"Не удалось открыть файл: {file_name} файл не существует")
         except PermissionError:
-            raise Exception("Не удалось открыть файл: " + file_name + " недостаточно прав")
+            print(f"Не удалось открыть файл: {file_name} недостаточно прав")
 
     def __del__(self):
         for temp_file in self.files.values():
@@ -112,7 +121,9 @@ start_time = time()
 if __name__ == "__main__":
     try:
         process()
-    except Exception as e:
-        print(e)
+    except FileNotFoundError:
+        pass
+    except PermissionError:
+        pass
 
-print('\nОбщее время работы программы: ' + str(time() - start_time) + ' сек.')
+print(f'\nОбщее время работы программы: {time() - start_time} сек.')

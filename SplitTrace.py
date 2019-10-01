@@ -11,8 +11,7 @@ class Spliter:
         self.input_file = self.open_file(self.input_file_name)
         self.files[self.input_file_name] = self.input_file
 
-
-        self.readed_data_size = 0
+        self.processed_data_size = 0
         self.progressbar_counter = 0
 
     def split_files(self, mode: str):
@@ -20,8 +19,9 @@ class Spliter:
         print('[          ]  0%', end='')
 
         for line in self.input_file:
-            if self.readed_data_size == 0:  # В первой строке line[0] символ порядка байтов.
-                line = line[1:]             # <- убираем первый символ из строки для корректной работы
+            # В первом символе файла мусор, убираем его
+            if self.processed_data_size == 0:
+                line = line[1:]
 
             if is_date_first(line):
                 if mode == '--module':
@@ -39,23 +39,25 @@ class Spliter:
                         self.files[log_file_name] = self.current_file
                         self.current_file.write(line)
                 except FileNotFoundError:
-                    self.write_to_basket(line)
+                    self.write_unknown(line)
                 except PermissionError:
-                    self.write_to_basket(line)
+                    self.write_unknown(line)
                 except KeyError:
-                    self.write_to_basket(line)
+                    self.write_unknown(line)
             else:
-                if self.readed_data_size == 0:   # В случае если первая строка не содержит дату или модуль
-                    self.write_to_basket(line)   # <- Записываем строки в _Unknown_.log пока не найдем их
+                # В случае если первая строка не содержит дату или модуль
+                # Записываем строки в _Unknown_.log пока не найдем их
+                if self.processed_data_size == 0:
+                    self.write_unknown(line)
                 self.current_file.write(line)
 
-            self.readed_data_size += len(line.encode('utf-8'))
-            if self.readed_data_size > (PROGRESSBAR_STEP *
+            self.processed_data_size += len(line.encode('utf-8'))
+            if self.processed_data_size > (PROGRESSBAR_STEP *
                                         self.progressbar_counter):
                 self.progressbar_counter += 1
                 update_progressbar(self.progressbar_counter)
 
-    def write_to_basket(self, line: str):
+    def write_unknown(self, line: str):
         if '_Unknown_.log' in self.files.keys():
             self.current_file = self.files['_Unknown_.log']
         else:
@@ -65,12 +67,13 @@ class Spliter:
 
     def open_file(self, file_name, mode='r'):
         try:
-            file = open(file_name, mode)
-            return file
+            return open(file_name, mode)
         except FileNotFoundError:
             print(f"Не удалось открыть файл: {file_name} файл не существует")
+            raise
         except PermissionError:
             print(f"Не удалось открыть файл: {file_name} недостаточно прав")
+            raise
 
     def __del__(self):
         for temp_file in self.files.values():

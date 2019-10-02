@@ -1,5 +1,6 @@
 from time import time
 from sys import argv
+
 import os
 
 
@@ -117,7 +118,6 @@ def process():
     input_file_name, mode = parse_args()
     splitter = Spliter(input_file_name)
     splitter.split_files(mode)
-
 
 start_time = time()
 

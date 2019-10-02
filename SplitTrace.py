@@ -1,54 +1,132 @@
 from time import time
 from sys import argv
 
-
-def make_breaking_up(line,mode : str, current_recording_file):
-
-	if is_date_first(line):
-		breaking_up_element = line.split()[2][1:-1] if mode == '--module' else line[0:10] 
-		if breaking_up_element in files.keys():
-			current_recording_file = files[breaking_up_element]
-			current_recording_file.write(line)
-		else:
-			current_recording_file = open( 'trace_' + breaking_up_element + '.log', 'w')
-			files[breaking_up_element] = current_recording_file
-			current_recording_file.write(line)
-	else:
-		current_recording_file.write(line)
-	return current_recording_file
+import os
 
 
-def is_date_first(line : str) -> bool:
-	return line[0].isdigit() \
-	and line[1].isdigit()    \
-	and line[2] == '.'       \
-	and line[3].isdigit()    \
-	and line[4].isdigit()    \
-	and line[5] == '.'       \
-	and line[6].isdigit()    \
-	and line[7].isdigit()    \
-	and line[8].isdigit()    \
-	and line[9].isdigit()
-		
+class Spliter:
+    files = {}
+
+    def __init__(self, input_file):
+        self.input_file_name = input_file
+        self.input_file = self.open_file(self.input_file_name)
+        self.files[self.input_file_name] = self.input_file
+
+        self.processed_data_size = 0
+        self.progressbar_counter = 0
+
+    def split_files(self, mode: str):
+        PROGRESSBAR_STEP = os.path.getsize(self.input_file_name) // 10
+        print('[          ]  0%', end='')
+
+        for line in self.input_file:
+            # В первом символе файла мусор, убираем его
+            if self.processed_data_size == 0:
+                line = line[1:]
+
+            if is_date_first(line):
+                if mode == '--module':
+                    split_element = line[25:line.find(']', 25)]
+                else:
+                    split_element = line[0:10]
+
+                log_file_name = f'trace_{split_element}.log'
+                try:
+                    if log_file_name in self.files:
+                        self.current_file = self.files[log_file_name]
+                        self.current_file.write(line)
+                    else:
+                        self.current_file = open(log_file_name, 'w')
+                        self.files[log_file_name] = self.current_file
+                        self.current_file.write(line)
+                except FileNotFoundError:
+                    self.write_unknown(line)
+                except PermissionError:
+                    self.write_unknown(line)
+                except KeyError:
+                    self.write_unknown(line)
+            else:
+                # В случае если первая строка не содержит дату или модуль
+                # Записываем строки в _Unknown_.log пока не найдем их
+                if self.processed_data_size == 0:
+                    self.write_unknown(line)
+                self.current_file.write(line)
+
+            self.processed_data_size += len(line.encode('utf-8'))
+            if self.processed_data_size > (PROGRESSBAR_STEP *
+                                        self.progressbar_counter):
+                self.progressbar_counter += 1
+                update_progressbar(self.progressbar_counter)
+
+    def write_unknown(self, line: str):
+        if '_Unknown_.log' in self.files.keys():
+            self.current_file = self.files['_Unknown_.log']
+        else:
+            self.current_file = self.open_file('_Unknown_.log', 'w')
+            self.files['_Unknown_.log'] = self.current_file
+        self.current_file.write(line)
+
+    def open_file(self, file_name, mode='r'):
+        try:
+            return open(file_name, mode)
+        except FileNotFoundError:
+            print(f"Не удалось открыть файл: {file_name} файл не существует")
+            raise
+        except PermissionError:
+            print(f"Не удалось открыть файл: {file_name} недостаточно прав")
+            raise
+
+    def __del__(self):
+        for temp_file in self.files.values():
+            temp_file.close()
+
+
+def is_date_first(line: str) -> bool:
+    return line[0].isdigit() \
+           and line[1].isdigit() \
+           and line[2] == '.' \
+           and line[3].isdigit() \
+           and line[4].isdigit() \
+           and line[5] == '.' \
+           and line[6].isdigit() \
+           and line[7].isdigit() \
+           and line[8].isdigit() \
+           and line[9].isdigit()
+
+
+def parse_args() -> tuple:
+    try:
+        mode = argv[1] if len(argv) > 1 else exit('bad args')
+    except:
+        raise Exception("Недостаточно аргументов")
+    input_file = argv[2] if len(argv) > 2 else 'trace.log'
+    return input_file, mode
+
+
+def update_progressbar(progressbar_counter: int):
+    print('\r', end='')
+    print('[', end='')
+    for i in range(10):
+        if i < progressbar_counter:
+            print('#', end='')
+        else:
+            print(' ', end='')
+    print('] {}%'.format(int(progressbar_counter * 10)), end='')
+
+
+def process():
+    input_file_name, mode = parse_args()
+    splitter = Spliter(input_file_name)
+    splitter.split_files(mode)
 
 start_time = time()
 
 if __name__ == "__main__":
-	mode = argv[1] if len(argv) > 1 else exit('bad args')
-	input_file = argv[2] if len(argv) > 2 else 'trace.log'
-	try:
-		f = open(input_file, encoding = 'utf-8')
-	except:
-		exit('Не удалось открыть файл: ' + input_file)
-	
-	current_recording_file = open('_Unknown_.log', 'w')
-	files = {'Unknown': current_recording_file}
+    try:
+        process()
+    except FileNotFoundError:
+        pass
+    except PermissionError:
+        pass
 
-	for line in f:
-		current_recording_file =  make_breaking_up(line, mode, current_recording_file)
-
-	for file in files.values():
-		file.close()
-	f.close()
-	
-print(time() - start_time)
+print(f'\nОбщее время работы программы: {time() - start_time} сек.')
